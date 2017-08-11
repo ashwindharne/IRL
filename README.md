@@ -1,6 +1,6 @@
 # Inverse Reinforcement Learning Utility Landscape
 
-One Paragraph of project description goes here
+Implementing various IRL algorithms in higher dimensional gridworlds for the purpose of utility landscape learning. 
 
 ## Algorithms Implemented
 

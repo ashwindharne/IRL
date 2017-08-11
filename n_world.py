@@ -1,12 +1,14 @@
+from sklearn.cluster import KMeans
 import numpy as np
 import numpy.random as rn
+import matplotlib.pyplot as plt
 
 class nworld(object):
     """
     N-dimensional gridworld MDP.
     """
 
-    def __init__(self, grid_size, dimensions, wind, discount):
+    def __init__(self, grid_size, dimensions, wind, discount, file):
         """
         grid_size: Grid size. int.
         wind: Chance of moving randomly. float.
@@ -15,11 +17,13 @@ class nworld(object):
         -> nworld
         """
         #setting member variables of the nworld
+        self.file = file
         self.n_states = grid_size**(dimensions)
         self.grid_size = grid_size
         self.wind = wind
         self.discount = discount
         self.dimensions = dimensions
+        self.kmeans_map = []
         #generates the corresponding set of incremental actions, e.g. (1,0)
         #default action set, can be changed
         self.actions = []
@@ -284,7 +288,7 @@ class nworld(object):
             accumulator += (si2[i] - si1[i])**2
         return np.sqrt(accumulator)
     def optimal_policy(self, s):
-        s = self.int_to_point(n)
+        s = self.int_to_point(s)
         value_state = self.int_to_point(self.n_states-1)
         min_distance = self.distance(s, value_state)
         action_index = 0
@@ -295,7 +299,7 @@ class nworld(object):
                 action_index = i
         return action_index
     def optimal_policy_deterministic(self, s):
-        s = self.int_to_point(n)
+        s = self.int_to_point(s)
         value_state = self.int_to_point(self.n_states-1)
         min_distance = self.distance(s, value_state)
         action_index = 0
@@ -305,30 +309,34 @@ class nworld(object):
                 min_distance = new_distance
                 action_index = i
         return action_index
-
-    def parse_trajectory(self, file, num_coords):
-        trajectories = []
-        f = open(file)
+    def cluster_grid(self):
+        points = self.get_coords()
+        kmeans = KMeans(n_clusters = self.grid_size**self.dimensions, random_state = 0).fit(points)
+        print(len(points))
+        plt.scatter(points[:, 0], points[:, 1])
+        plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1])
+        plt.show()
+    def get_coords(self):
+        points = []
+        f = open(self.file)
         st = "default"
         while len(st) != 0:
             st = f.readline()
             means = []
             stds = []
-            for n in range (num_coords):
-                means.append(self.get_mean(file, n))
-                stds.append(self.get_std(file, n))
-            if st != "\n":
-                trajectory = []
+            for n in range (self.dimensions):
+                means.append(self.get_mean(self.file, n))
+                stds.append(self.get_mean(self.file, n))
+            if st != '\n':
                 while len(st) > 1:
                     newCoord = st.split()
-                    while len(newCoord) > num_coords:#number of variables used
+                    while len(newCoord) > self.dimensions:
                         newCoord.pop()
-                    for i in range (len(newCoord)):
-                        newCoord[i] = int((2 + (float(newCoord[i]) - means[i])/stds[i]) * 10)
-                    trajectory.append(newCoord)
+                    for i in range(len(newCoord)):
+                        newCoord[i] = (float(newCoord[i])-means[i])/stds[i]*100
+                    points.append(newCoord)
                     st = f.readline()
-                trajectories.append(trajectory)
-        return np.array(trajectories)
+        return np.array(points)
     def get_mean(self, file, coord):
         f = open(file)
         st = "default"
@@ -361,8 +369,16 @@ class nworld(object):
         vals = [float(i) for i in vals]
         vals = np.array(vals)
         return np.std(vals)
-                
-
+    def cluster_actions(self, trajectories):
+        actions = []
+        for n in range (len(trajectories)):
+            trajectory = trajectories[n]
+            for i in range (len(trajectory)-1):
+                action = np.subtract(trajectory[i+1], trajectory[i])
+                actions.append(action)
+        actions = np.array(actions)
+        kmeans = KMeans(n_clusters = 6, random_state = 0).fit(actions)
+        return kmeans.cluster_centers_
     def generate_trajectories(self, n_trajectories, trajectory_length, policy,
                                     random_start=False):
         """
