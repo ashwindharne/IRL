@@ -22,10 +22,11 @@ def main(grid_size, dimensions, discount, n_trajectories, epochs, learning_rate)
     """
     wind = 0.3
     nw = n_world.nworld(grid_size, dimensions, wind, discount, "parsed.txt")
-    #nw.cluster_grid()
-    #trajectories = nw.parse_trajectories()
-    #actions = nw.cluster_actions(trajectories)
-    #print(actions)
+    nw.cluster_grid()
+    trajectories = nw.parse_trajectories()
+    actions = nw.cluster_actions(trajectories)
+    print(actions)
+    """
     print("Dimensions: " + str(dimensions))
     print("Grid Size: " + str(grid_size))
     start = time.time()
@@ -50,6 +51,6 @@ def main(grid_size, dimensions, discount, n_trajectories, epochs, learning_rate)
     plt.colorbar()
     plt.title("Recovered reward")
     plt.show()
-
+	"""
 if __name__ == '__main__':
     main(5, 2, 0.01, 20, 200, 0.01)
