@@ -106,22 +106,4 @@ def find_policy(n_states, n_actions, transition_probabilities, reward, discount,
     policy = np.array([_policy(s) for s in range(n_states)])
     return policy
 
-if __name__ == '__main__':
-    # Quick unit test using gridworld.
-    import mdp.gridworld as gridworld
-    gw = gridworld.Gridworld(3, 0.3, 0.9)
-    v = value([gw.optimal_policy_deterministic(s) for s in range(gw.n_states)],
-              gw.n_states,
-              gw.transition_probability,
-              [gw.reward(s) for s in range(gw.n_states)],
-              gw.discount)
-    assert np.isclose(v,
-                      [5.7194282, 6.46706692, 6.42589811,
-                       6.46706692, 7.47058224, 7.96505174,
-                       6.42589811, 7.96505174, 8.19268666], 1).all()
-    opt_v = optimal_value(gw.n_states,
-                          gw.n_actions,
-                          gw.transition_probability,
-                          [gw.reward(s) for s in range(gw.n_states)],
-                          gw.discount)
-    assert np.isclose(v, opt_v).all()
+

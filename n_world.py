@@ -1,13 +1,13 @@
 from sklearn.cluster import KMeans
 import numpy as np
 import numpy.random as rn
+from minisom import MiniSom
 import matplotlib.pyplot as plt
 
 class nworld(object):
     """
     N-dimensional gridworld MDP.
     """
-
     def __init__(self, grid_size, dimensions, wind, discount, file):
         """
         grid_size: Grid size. int.
@@ -23,7 +23,6 @@ class nworld(object):
         self.wind = wind
         self.discount = discount
         self.dimensions = dimensions
-        self.kmeans_map = []
         #generates the corresponding set of incremental actions, e.g. (1,0)
         #default action set, can be changed
         self.actions = []
@@ -45,7 +44,6 @@ class nworld(object):
                for k in range(self.n_states)]
               for j in range(self.n_actions)]
              for i in range(self.n_states)])
-
     def __str__(self):
         return "Gridworld({}, {}, {})".format(self.grid_size, self.wind,
                                               self.discount)
@@ -77,7 +75,6 @@ class nworld(object):
         f = np.zeros(self.n_states)
         f[i] = 1
         return f
-
     def feature_matrix(self, feature_map="ident"):
         """
         Get the feature matrix for this gridworld.
@@ -102,7 +99,6 @@ class nworld(object):
         for n in range (self.dimensions):
             pt.append((i%((self.grid_size)**(n+1)))//((self.grid_size)**n))
         return tuple(pt)
-
     def point_to_int(self, p):
         """
         Convert a coordinate into the corresponding state int.
@@ -113,6 +109,7 @@ class nworld(object):
         for cd in range (len(p)):
             s_int += p[cd] * ((self.grid_size)**cd)
         return s_int
+
     def act(self, s, a):
         """
         TRIVIAL HELPER FUNCTION
@@ -145,7 +142,6 @@ class nworld(object):
             if(self.intended(i, self.actions[n], k)):
                 return True
         return False
-
     def intended(self, i, a, j):
         """
         TRIVIAL HELPER FUNCTION
@@ -159,7 +155,6 @@ class nworld(object):
             if (i[l] + a[l]) != (j[l]):
                 return False
         return True
-
     def corner(self, p):
         """
         TRIVIAL HELPER FUNCTION
@@ -247,76 +242,37 @@ class nworld(object):
             else:
                 # We can blow off the grid only by wind.
                 return self.wind/self.n_actions
-    def reward(self, state_int):
-        """
-        Reward for being in state state_int.
-        state_int: State integer. int.
-        -> Reward.
-        """
 
-        if state_int == self.n_states - 1:
-            return 1
-        return 0
-
-    def average_reward(self, n_trajectories, trajectory_length, policy):
-        """
-        Calculate the average total reward obtained by following a given policy
-        over n_paths paths.
-        policy: Map from state integers to action integers.
-        n_trajectories: Number of trajectories. int.
-        trajectory_length: Length of an episode. int.
-        -> Average reward, standard deviation.
-        """
-
-        trajectories = self.generate_trajectories(n_trajectories,
-                                             trajectory_length, policy)
-        rewards = [[r for _, _, r in trajectory] for trajectory in trajectories]
-        rewards = np.array(rewards)
-
-        # Add up all the rewards to find the total reward.
-        total_reward = rewards.sum(axis=1)
-
-        # Return the average reward and standard deviation.
-        return total_reward.mean(), total_reward.std()
-    def distance(self, si1, si2):
-        """
-        Finds the distance in n dimensions between state tuple 1 and state
-        tuple 2.
-        """
-        accumulator = 0
-        for i in range (len(si1)):
-            accumulator += (si2[i] - si1[i])**2
-        return np.sqrt(accumulator)
-    def optimal_policy(self, s):
-        s = self.int_to_point(s)
-        value_state = self.int_to_point(self.n_states-1)
-        min_distance = self.distance(s, value_state)
-        action_index = 0
-        for i in range (len(self.actions)):
-            new_distance = self.distance(self.act(s, self.actions[i]), value_state)
-            if (new_distance < min_distance):
-                min_distance = new_distance
-                action_index = i
-        return action_index
-    def optimal_policy_deterministic(self, s):
-        s = self.int_to_point(s)
-        value_state = self.int_to_point(self.n_states-1)
-        min_distance = self.distance(s, value_state)
-        action_index = 0
-        for i in range (len(self.actions)):
-            new_distance = self.distance(self.act(s, self.actions[i]), value_state)
-            if (new_distance < min_distance):
-                min_distance = new_distance
-                action_index = i
-        return action_index
-    def cluster_grid(self):
-        points = self.get_coords()
-        kmeans = KMeans(n_clusters = self.grid_size**self.dimensions, random_state = 0).fit(points)
-        print(len(points))
-        plt.scatter(points[:, 0], points[:, 1])
-        plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1])
-        plt.show()
-    def get_coords(self):
+    def cluster_grid(self, num_coords):
+        points = self.get_coords(num_coords)
+        som = MiniSom(self.grid_size, self.grid_size, num_coords)
+        som.train_random(points, 200)
+        trajectories = []
+        trajectory = []
+        f = open(self.file)
+        st = f.readline()
+        i = 0
+        while len(st) != 0:
+            if st != '\n':
+                trajectory.append(points[i])
+                i += 1
+            elif st == '\n':
+                trajectories.append(trajectory)
+                trajectory = []
+            st = f.readline()
+        realtrajectories=[]
+        for trajectory in trajectories:
+            realtrajectory=[]
+            for i in range (0, 10):
+                if(i >= len(trajectory)):
+                    newpoint=(self.point_to_int(som.winner(trajectory[len(trajectory)-1])), 0, 0)
+                    realtrajectory.append(newpoint)
+                    continue
+                newpoint = (self.point_to_int(som.winner(trajectory[i])), 0, 0)
+                realtrajectory.append(newpoint)
+            realtrajectories.append(realtrajectory)
+        return(np.array(realtrajectories))
+    def get_coords(self, num_coords):
         points = []
         f = open(self.file)
         st = "default"
@@ -324,16 +280,16 @@ class nworld(object):
             st = f.readline()
             means = []
             stds = []
-            for n in range (self.dimensions):
+            for n in range (0, num_coords):
                 means.append(self.get_mean(self.file, n))
                 stds.append(self.get_mean(self.file, n))
             if st != '\n':
                 while len(st) > 1:
                     newCoord = st.split()
-                    while len(newCoord) > self.dimensions:
+                    while len(newCoord) > num_coords:
                         newCoord.pop()
                     for i in range(len(newCoord)):
-                        newCoord[i] = (float(newCoord[i])-means[i])/stds[i]*100
+                        newCoord[i] = (float(newCoord[i])-means[i])/stds[i] + 1
                     points.append(newCoord)
                     st = f.readline()
         return np.array(points)
@@ -369,46 +325,3 @@ class nworld(object):
         vals = [float(i) for i in vals]
         vals = np.array(vals)
         return np.std(vals)
-    def cluster_actions(self, trajectories):
-        actions = []
-        for n in range (len(trajectories)):
-            trajectory = trajectories[n]
-            for i in range (len(trajectory)-1):
-                action = np.subtract(trajectory[i+1], trajectory[i])
-                actions.append(action)
-        actions = np.array(actions)
-        kmeans = KMeans(n_clusters = 6, random_state = 0).fit(actions)
-        return kmeans.cluster_centers_
-    def generate_trajectories(self, n_trajectories, trajectory_length, policy,
-                                    random_start=False):
-        """
-        Generate n_trajectories trajectories with length trajectory_length,
-        following the given policy.
-        n_trajectories: Number of trajectories. int.
-        trajectory_length: Length of an episode. int.
-        policy: Map from state integers to action integers.
-        random_start: Whether to start randomly (default False). bool.
-        -> [[(state int, action int, reward float)]]
-        """
-        trajectories = []
-        for _ in range(n_trajectories):
-            state = self.int_to_point(0)
-            trajectory = []
-            for _ in range(trajectory_length):
-                if rn.random() < self.wind:
-                    action = self.actions[rn.randint(0, len(self.actions))]
-                else:
-                    # Follow the given policy.
-                    action = self.actions[policy(self.point_to_int(state))]
-                if (self.off_grid(state, action)):
-                    next_state = state
-                else:
-                    next_state = self.act(state, action)
-                state_int = self.point_to_int(state)
-                action_int = self.actions.index(action)
-                next_state_int = self.point_to_int(next_state)
-                reward = self.reward(next_state_int)
-                trajectory.append((state_int, action_int, reward))
-                state = next_state
-            trajectories.append(trajectory)
-        return np.array(trajectories)
