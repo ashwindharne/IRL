@@ -22,7 +22,8 @@ def main(grid_size, dimensions, discount, n_trajectories, epochs, learning_rate)
     """
     wind = 0.1
     nw = n_world.nworld(grid_size, dimensions, wind, discount, "parsed.txt")
-    trajectories = nw.cluster_grid(14)#number of coordinates to parse
+    trajectories = nw.cluster_grid(14, 8)#number of coordinates to parse, trajectory length
+    nw.generate_action(trajectories)
     print("Dimensions: " + str(dimensions))
     print("Grid Size: " + str(grid_size))
     start = time.time()

@@ -243,10 +243,10 @@ class nworld(object):
                 # We can blow off the grid only by wind.
                 return self.wind/self.n_actions
 
-    def cluster_grid(self, num_coords):
+    def cluster_grid(self, num_coords, trajectory_length):
         points = self.get_coords(num_coords)
-        som = MiniSom(self.grid_size, self.grid_size, num_coords)
-        som.train_random(points, 200)
+        som = MiniSom(self.grid_size, self.grid_size, num_coords, learning_rate=0.2)
+        som.train_random(points, 250)
         trajectories = []
         trajectory = []
         f = open(self.file)
@@ -263,7 +263,7 @@ class nworld(object):
         realtrajectories=[]
         for trajectory in trajectories:
             realtrajectory=[]
-            for i in range (0, 10):
+            for i in range (0, 7):
                 if(i >= len(trajectory)):
                     newpoint=(self.point_to_int(som.winner(trajectory[len(trajectory)-1])), 0, 0)
                     realtrajectory.append(newpoint)
@@ -272,6 +272,17 @@ class nworld(object):
                 realtrajectory.append(newpoint)
             realtrajectories.append(realtrajectory)
         return(np.array(realtrajectories))
+    def generate_action(self, trajectories):
+        self.actions=[]
+        for trajectory in trajectories:
+            for i in range (1, len(trajectory)):
+                new_action=tuple(np.subtract(self.int_to_point(trajectory[i][0]), self.int_to_point(trajectory[i-1][0])))
+                if new_action in self.actions:
+                    continue
+                self.actions.append(new_action)
+        self.actions=tuple(self.actions)
+
+
     def get_coords(self, num_coords):
         points = []
         f = open(self.file)
