@@ -245,8 +245,8 @@ class nworld(object):
 
     def cluster_grid(self, num_coords, trajectory_length):
         points = self.get_coords(num_coords)
-        som = MiniSom(self.grid_size, self.grid_size, num_coords, learning_rate=0.2)
-        som.train_random(points, 250)
+        som = MiniSom(self.grid_size, self.grid_size, num_coords, learning_rate=0.3)
+        som.train_random(points, 300)
         trajectories = []
         trajectory = []
         f = open(self.file)
@@ -263,10 +263,9 @@ class nworld(object):
         realtrajectories=[]
         for trajectory in trajectories:
             realtrajectory=[]
-            for i in range (0, 7):
+            for i in range (0, trajectory_length):
                 if(i >= len(trajectory)):
-                    newpoint=(self.point_to_int(som.winner(trajectory[len(trajectory)-1])), 0, 0)
-                    realtrajectory.append(newpoint)
+                    realtrajectory.append(realtrajectory[len(realtrajectory)-1])
                     continue
                 newpoint = (self.point_to_int(som.winner(trajectory[i])), 0, 0)
                 realtrajectory.append(newpoint)
